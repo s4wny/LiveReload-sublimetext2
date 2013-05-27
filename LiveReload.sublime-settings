@@ -2,6 +2,7 @@
     "version" : "1.6"
   , "port" : 35729
   , "delay_ms" : 100
+  , "delay_ms_scss" : 400 
   , "apply_js_live" : false
   , "apply_css_live" : true
   , "apply_images_live" : true
