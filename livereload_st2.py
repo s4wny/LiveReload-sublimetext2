@@ -49,53 +49,26 @@ class LiveReloadChange(sublime_plugin.EventListener):
       global  LivereloadFactory
       settings = sublime.load_settings('LiveReload.sublime-settings')
       filename = view.file_name()
+
+      filename = os.path.normcase(filename)
+      filename = os.path.split(filename)[1]
+      filename = filename.replace('.scss','.css').replace('.styl','.css').replace('.less','.css')
+      filename = filename.replace('.coffee','.js')
+
+      data = json.dumps(["refresh", {
+            "path": filename,
+            "apply_js_live": settings.get('apply_js_live'),
+            "apply_css_live": settings.get('apply_css_live'),
+            "apply_images_live": settings.get('apply_images_live')
+        }])
+
       if view.file_name().find('.scss') > 0 or view.file_name().find('.sass') > 0:
-        compiler = CompassThread(filename,LivereloadFactory)
-        compiler.start()
+        delay_ms = settings.get('delay_ms_scss');
       else:
-        filename = os.path.normcase(filename)
-        filename = os.path.split(filename)[1]
-        filename = filename.replace('.scss','.css').replace('.styl','.css').replace('.less','.css')
-        filename = filename.replace('.coffee','.js')
-
-        data = json.dumps(["refresh", {
-              "path": filename,
-              "apply_js_live": settings.get('apply_js_live'),
-              "apply_css_live": settings.get('apply_css_live'),
-              "apply_images_live": settings.get('apply_images_live')
-          }])
-        sublime.set_timeout(lambda: LivereloadFactory.send_all(data), int(settings.get('delay_ms')))
-        sublime.set_timeout(lambda: sublime.status_message("Sent LiveReload command for file: "+filename), int(settings.get('delay_ms')))
-
-
-class CompassThread(threading.Thread):
-
-    def __init__(self, filename,LivereloadFactory):
-      self.dirname = os.path.dirname(filename)
-      self.filename = filename.replace('.scss','.css').replace('.sass','.css')
-      self.LivereloadFactory = LivereloadFactory
-      self.stdout = None
-      self.stderr = None
-      threading.Thread.__init__(self)
-
-    def run(self):
-      global LivereloadFactory
-      print 'compass compile ' + self.dirname
-
-      # autocreate config.rb for compass
-      if not os.path.exists(os.path.join(self.dirname, "config.rb")):
-        print "Generating config.rb"
-        shutil.copy(os.path.join(sublime.packages_path(), "LiveReload","assets","config.rb"), self.dirname)
-
-      # compass compile
-      p = subprocess.Popen(['compass compile ' + self.dirname.replace('\\','/')],shell=True,  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT )
-      if p.stdout.read() :
-        self.LivereloadFactory.send_all(json.dumps(["refresh", {
-              "path": self.filename.replace('\\','/'),
-              "apply_js_live": True,
-              "apply_css_live": True,
-              "apply_images_live": True
-        }]))
+        delay_ms = settings.get('delay_ms');
+        
+      sublime.set_timeout(lambda: LivereloadFactory.send_all(data), int(delay_ms))
+      sublime.set_timeout(lambda: sublime.status_message("Sent LiveReload command for file: "+filename), int(delay_ms))
 
 
 class WebSocketServer:
